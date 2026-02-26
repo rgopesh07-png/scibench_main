@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>Builder | SciBench</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    <style>
+        body { margin: 0; font-family: system-ui, sans-serif; overflow-x: hidden; transition: background-color 0.3s, color 0.3s; }
+        .bg-vibrant { position: fixed; inset: 0; z-index: -2; background: linear-gradient(-45deg, #fce7f3, #fbcfe8, #f9a8d4, #fce7f3); background-size: 400% 400%; animation: ambient 15s ease infinite; transition: opacity 0.5s; }
+        .stars { position: fixed; inset: 0; z-index: -1; width: 200%; height: 2000px; background: radial-gradient(circle, #64748b 1px, transparent 1px); background-size: 40px 40px; opacity: 0.5; }
+        
+        html.dark .bg-vibrant { background: linear-gradient(-45deg, #020617, #4a044e, #2e1065, #0f172a); }
+        html.dark .stars { background: radial-gradient(circle, #ec4899 1px, transparent 1px); background-size: 70px 70px; opacity: 0.15; animation: stars-move 70s linear infinite; }
+        @keyframes ambient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        @keyframes stars-move { from { transform: translateY(0); } to { transform: translateY(-1000px); } }
+
+        .theme-glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border: 2px solid #db2777; box-shadow: 0 15px 35px rgba(219, 39, 119, 0.2); transition: all 0.3s; }
+        html.dark .theme-glass { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.8); }
+    </style>
+</head>
+<body class="p-8 relative min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <div class="bg-vibrant"></div><div class="stars"></div>
+    
+    <header class="flex justify-between items-center mb-10 max-w-[90rem] mx-auto">
+        <a href="/" class="text-4xl font-black text-pink-700 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-pink-400 dark:to-fuchsia-600 hover:scale-105 transition-transform tracking-tight drop-shadow-lg">SCIBENCH</a>
+        <div class="flex items-center gap-4">
+            <button id="themeToggle" class="bg-white dark:bg-slate-800 text-slate-900 dark:text-yellow-400 font-bold py-2 px-4 rounded-full shadow-lg hover:scale-105 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-2 text-sm">
+                <span id="themeIcon">☀️</span> <span id="themeText" class="hidden sm:inline">Light</span>
+            </button>
+            <a href="/" class="theme-glass text-pink-700 dark:text-pink-400 font-bold py-2 px-4 md:px-6 rounded-xl hover:bg-pink-50 dark:hover:text-white transition-colors flex items-center gap-2 text-sm">
+                <span>←</span> <span class="hidden md:inline">Back to Dashboard</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="max-w-[90rem] mx-auto grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <aside class="lg:col-span-1 space-y-8">
+            <div class="theme-glass p-8 rounded-[2rem]">
+                <h3 class="text-pink-700 dark:text-pink-400 font-black uppercase tracking-widest text-sm mb-4 border-b border-pink-200 dark:border-pink-500/30 pb-2">Module Analysis</h3>
+                <p class="text-slate-900 dark:text-slate-300 font-bold dark:font-medium">Aggregates 6 distinct performance vectors into a unified SciBench rating.</p>
+            </div>
+            <div class="theme-glass p-8 rounded-[2rem] bg-pink-50 dark:bg-slate-900/80 border-l-4 border-l-pink-600 dark:border-l-pink-500">
+                <h3 class="text-sm font-black text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-widest">💠 Polar Graphing</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4">A Polar Area Chart is used here because the radial projection easily exposes "weak links" in a combined system.</p>
+                <div class="mt-4 p-3 bg-white dark:bg-slate-950/50 rounded-lg border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+                    <strong>Visual Check:</strong> If one wedge is drastically smaller, your rig is unbalanced and unoptimized for general computing.
+                </div>
+            </div>
+        </aside>
+
+        <div class="lg:col-span-3">
+            <form method="POST" class="theme-glass p-10 rounded-[2rem] mb-8 grid md:grid-cols-2 gap-6 bg-white dark:bg-transparent">
+                <select name="cpu" required class="bg-slate-50 dark:bg-slate-900/80 p-6 rounded-2xl border-2 dark:border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 font-black focus:border-pink-600 dark:focus:border-pink-500 outline-none text-lg shadow-inner">
+                    <option value="" disabled selected>Select CPU...</option>
+                    {% for c in cpus %}<option value="{{ c.id }}" {% if request.form.get('cpu') == c.id|string %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+                </select>
+                <select name="gpu" required class="bg-slate-50 dark:bg-slate-900/80 p-6 rounded-2xl border-2 dark:border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 font-black focus:border-pink-600 dark:focus:border-pink-500 outline-none text-lg shadow-inner">
+                    <option value="" disabled selected>Select GPU...</option>
+                    {% for g in gpus %}<option value="{{ g.id }}" {% if request.form.get('gpu') == g.id|string %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+                </select>
+                <button type="submit" class="md:col-span-2 bg-pink-600 text-white dark:text-slate-100 font-black py-5 rounded-2xl shadow-xl dark:shadow-[0_0_20px_rgba(219,39,119,0.3)] hover:bg-pink-700 dark:hover:bg-pink-500 transition-colors text-xl tracking-widest">BUILD CUSTOM RIG</button>
+            </form>
+
+            {% if data %}
+            <div class="theme-glass p-10 rounded-[2rem] grid md:grid-cols-2 gap-10 items-center border-t-8 dark:border-t-4 border-t-pink-600 dark:border-t-pink-500 bg-white dark:bg-transparent">
+                <div class="text-center">
+                    <h3 class="text-2xl font-black text-slate-900 dark:text-slate-200 mb-2 leading-tight">{{ data.cn }} <br><span class="text-slate-500 font-medium text-lg my-2 block">+</span> {{ data.gn }}</h3>
+                    <p class="text-7xl font-black text-pink-600 dark:text-pink-400 my-6 dark:drop-shadow-[0_0_15px_rgba(236,72,153,0.3)]">{{ "{:,}".format(data.total) }}</p>
+                    <p class="text-sm text-slate-600 dark:text-slate-400 uppercase font-black tracking-widest mb-8">Combined Points</p>
+                    
+                    <div class="bg-emerald-50 dark:bg-emerald-950/30 p-5 rounded-2xl border-2 dark:border border-emerald-200 dark:border-emerald-500/30 shadow-inner">
+                        <p class="text-slate-600 dark:text-emerald-500 font-black text-xs uppercase mb-1 tracking-widest">Est. Hardware Cost</p>
+                        <p class="text-4xl font-black text-emerald-700 dark:text-emerald-400 font-mono">₹{{ "{:,}".format(data.price) }}</p>
+                    </div>
+                </div>
+
+                <div class="w-full aspect-square relative p-6 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 dark:border border-slate-200 dark:border-slate-700 shadow-inner">
+                    <canvas id="builderChart"></canvas>
+                </div>
+            </div>
+
+            <script>
+                let builderChart;
+                function renderChart() {
+                    const isDark = document.documentElement.classList.contains('dark');
+                    Chart.defaults.color = isDark ? '#f8fafc' : '#0f172a';
+                    const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                    const bgColors = isDark 
+                        ? ['rgba(56, 189, 248, 0.6)', 'rgba(192, 132, 252, 0.6)', 'rgba(251, 146, 60, 0.6)']
+                        : ['rgba(14, 165, 233, 0.8)', 'rgba(168, 85, 247, 0.8)', 'rgba(249, 115, 22, 0.8)'];
+
+                    if(builderChart) builderChart.destroy();
+
+                    builderChart = new Chart(document.getElementById('builderChart'), {
+                        type: 'polarArea',
+                        data: {
+                            labels: ['Climate (FP64)', 'Genome (Cache)', 'Physics (CUDA)'],
+                            datasets: [{ 
+                                data: [{{ data.cli }}, {{ data.gen }}, {{ data.phy }}], 
+                                backgroundColor: bgColors, 
+                                borderWidth: 2, borderColor: isDark ? '#0f172a' : '#ffffff'
+                            }]
+                        },
+                        options: { 
+                            responsive: true, maintainAspectRatio: false,
+                            scales: { r: { grid: { color: gridColor }, ticks: { display: false } } },
+                            plugins: { legend: { position: 'bottom', labels: { font: { weight: 'bold' } } } }
+                        }
+                    });
+                }
+                renderChart();
+            </script>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+        const html = document.documentElement;
+
+        if (localStorage.getItem('theme') === 'light') { html.classList.remove('dark'); themeIcon.innerText = '🌙'; themeText.innerText = 'Dark'; }
+        themeToggle.addEventListener('click', () => {
+            if (html.classList.contains('dark')) { html.classList.remove('dark'); localStorage.setItem('theme', 'light'); themeIcon.innerText = '🌙'; themeText.innerText = 'Dark'; } 
+            else { html.classList.add('dark'); localStorage.setItem('theme', 'dark'); themeIcon.innerText = '☀️'; themeText.innerText = 'Light'; }
+            if(typeof renderChart === "function") renderChart();
+        });
+    </script>
+</body>
+</html>

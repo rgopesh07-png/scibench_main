@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>Compare | SciBench</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    <style>
+        body { margin: 0; font-family: system-ui, sans-serif; overflow-x: hidden; transition: background-color 0.3s, color 0.3s; }
+        .bg-vibrant { position: fixed; inset: 0; z-index: -2; background: linear-gradient(-45deg, #e0f2fe, #bae6fd, #ddd6fe, #e0f2fe); background-size: 400% 400%; animation: ambient 15s ease infinite; transition: opacity 0.5s; }
+        .stars { position: fixed; inset: 0; z-index: -1; width: 200%; height: 2000px; background: radial-gradient(circle, #64748b 1px, transparent 1px); background-size: 40px 40px; opacity: 0.5; }
+        
+        html.dark .bg-vibrant { background: linear-gradient(-45deg, #020617, #0f172a, #1e1b4b, #0f172a); }
+        html.dark .stars { background: radial-gradient(circle, #6366f1 1px, transparent 1px); background-size: 70px 70px; opacity: 0.15; animation: stars-move 70s linear infinite; }
+        @keyframes ambient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        @keyframes stars-move { from { transform: translateY(0); } to { transform: translateY(-1000px); } }
+
+        .theme-glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border: 2px solid #38bdf8; box-shadow: 0 15px 35px rgba(14, 165, 233, 0.15); transition: all 0.3s; }
+        html.dark .theme-glass { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.8); }
+    </style>
+</head>
+<body class="p-6 md:p-10 relative min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <div class="bg-vibrant"></div><div class="stars"></div>
+    
+    <header class="flex justify-between items-center mb-10 max-w-[90rem] mx-auto">
+        <a href="/" class="text-4xl font-black text-indigo-700 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-indigo-400 dark:to-sky-400 hover:scale-105 transition-transform tracking-tight dark:drop-shadow-lg">SCIBENCH</a>
+        <div class="flex items-center gap-4">
+            <button id="themeToggle" class="bg-white dark:bg-slate-800 text-slate-900 dark:text-yellow-400 font-bold py-2 px-4 rounded-full shadow-lg hover:scale-105 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-2 text-sm">
+                <span id="themeIcon">☀️</span> <span id="themeText" class="hidden sm:inline">Light</span>
+            </button>
+            <a href="/" class="theme-glass text-indigo-700 dark:text-indigo-400 font-bold py-2 px-4 md:px-6 rounded-xl hover:bg-indigo-50 dark:hover:text-white transition-colors flex items-center gap-2 text-sm">
+                <span>←</span> <span class="hidden md:inline">Back to Dashboard</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="max-w-[90rem] mx-auto grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <aside class="lg:col-span-1 space-y-8">
+            <div class="theme-glass p-8 rounded-[2rem]">
+                <h3 class="text-indigo-700 dark:text-indigo-400 font-black uppercase tracking-widest text-sm mb-4 border-b border-indigo-200 dark:border-indigo-500/30 pb-2">Module Analysis</h3>
+                <p class="text-slate-800 dark:text-slate-300 font-bold dark:font-medium">Dynamically maps the strengths of both architectures to visually identify specific scientific use-case winners.</p>
+            </div>
+            <div class="theme-glass p-8 rounded-[2rem] bg-indigo-50 dark:bg-slate-900/80 border-l-4 border-l-indigo-600 dark:border-l-indigo-500">
+                <h3 class="text-sm font-black text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-widest">📊 Dual Charting</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4">Why use two charts? In HPC environments, raw aggregate scores can be misleading.</p>
+                <div class="mt-4 p-4 bg-white dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 space-y-3">
+                    <p><strong>1. The Radar Chart:</strong> Reveals the <em>shape</em> and bias of the architecture.</p>
+                    <p><strong>2. The Bar Chart:</strong> Reveals the exact <em>raw output difference</em> side-by-side.</p>
+                </div>
+            </div>
+        </aside>
+
+        <div class="lg:col-span-3">
+            <form method="POST" class="theme-glass p-10 rounded-[2rem] mb-8 grid md:grid-cols-2 gap-6 bg-white dark:bg-transparent">
+                <select name="p1" required class="w-full bg-slate-50 dark:bg-slate-900/80 p-6 rounded-2xl border-2 dark:border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black focus:border-indigo-600 dark:focus:border-indigo-500 outline-none transition-all shadow-inner text-lg">
+                    <option value="" disabled selected>Select Component A...</option>
+                    {% for p in parts %}<option value="{{ p.id }}" {% if request.form.get('p1') == p.id|string %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+                </select>
+                <select name="p2" required class="w-full bg-slate-50 dark:bg-slate-900/80 p-6 rounded-2xl border-2 dark:border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black focus:border-indigo-600 dark:focus:border-indigo-500 outline-none transition-all shadow-inner text-lg">
+                    <option value="" disabled selected>Select Component B...</option>
+                    {% for p in parts %}<option value="{{ p.id }}" {% if request.form.get('p2') == p.id|string %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+                </select>
+                <button type="submit" class="md:col-span-2 bg-indigo-700 dark:bg-indigo-600 text-white dark:text-slate-100 font-black py-5 rounded-2xl shadow-xl dark:shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:bg-indigo-800 dark:hover:bg-indigo-500 transition-colors text-xl tracking-widest">GENERATE DUAL COMPARISON</button>
+            </form>
+
+            {% if d1 and d2 %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div class="theme-glass p-8 rounded-[2rem] border-t-8 dark:border-t-4 border-t-indigo-600 dark:border-t-indigo-500 text-center bg-white dark:bg-transparent">
+                    <h3 class="text-xl font-black mb-2 text-indigo-900 dark:text-indigo-300">{{ d1.name }}</h3>
+                    <p class="text-5xl font-black text-indigo-700 dark:text-indigo-400 dark:drop-shadow-md mb-2">{{ "{:,}".format(d1.total) }}</p>
+                    <span class="text-xs text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest">Total Points</span>
+                    <p class="text-lg font-mono font-bold text-slate-600 dark:text-slate-300 mt-4 border-t-2 dark:border-t border-slate-100 dark:border-slate-700/50 pt-4">Est: ₹{{ "{:,}".format(d1.price) }}</p>
+                </div>
+                <div class="theme-glass p-8 rounded-[2rem] border-t-8 dark:border-t-4 border-t-sky-500 dark:border-t-sky-500 text-center bg-white dark:bg-transparent">
+                    <h3 class="text-xl font-black mb-2 text-sky-900 dark:text-sky-300">{{ d2.name }}</h3>
+                    <p class="text-5xl font-black text-sky-700 dark:text-sky-400 dark:drop-shadow-md mb-2">{{ "{:,}".format(d2.total) }}</p>
+                    <span class="text-xs text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest">Total Points</span>
+                    <p class="text-lg font-mono font-bold text-slate-600 dark:text-slate-300 mt-4 border-t-2 dark:border-t border-slate-100 dark:border-slate-700/50 pt-4">Est: ₹{{ "{:,}".format(d2.price) }}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="theme-glass p-8 rounded-[2rem] flex flex-col bg-white dark:bg-transparent">
+                    <h3 class="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest mb-6 text-center">Architectural Bias</h3>
+                    <div class="w-full flex-grow min-h-[300px] relative"><canvas id="radarChart"></canvas></div>
+                </div>
+                <div class="theme-glass p-8 rounded-[2rem] flex flex-col bg-white dark:bg-transparent">
+                    <h3 class="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest mb-6 text-center">Direct Metric Output</h3>
+                    <div class="w-full flex-grow min-h-[300px] relative"><canvas id="barChart"></canvas></div>
+                </div>
+            </div>
+
+            <script>
+                const d1 = {{ d1 | tojson }};
+                const d2 = {{ d2 | tojson }};
+                let radarChart, barChart;
+
+                function renderChart() {
+                    const isDark = document.documentElement.classList.contains('dark');
+                    Chart.defaults.color = isDark ? '#94a3b8' : '#475569';
+                    Chart.defaults.borderColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+                    const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                    const legendColor = isDark ? '#f8fafc' : '#0f172a';
+                    const pointLabelColor = isDark ? '#e2e8f0' : '#334155';
+
+                    if(radarChart) radarChart.destroy();
+                    if(barChart) barChart.destroy();
+
+                    radarChart = new Chart(document.getElementById('radarChart'), {
+                        type: 'radar',
+                        data: {
+                            labels: ['Climate (FP64)', 'Genome (Cache)', 'Physics (CUDA)'],
+                            datasets: [
+                                { label: d1.name, data: [d1.cli, d1.gen, d1.phy], fill: true, backgroundColor: isDark ? 'rgba(99, 102, 241, 0.4)' : 'rgba(67, 56, 202, 0.4)', borderColor: isDark ? '#818cf8' : '#4338ca', borderWidth: 2 },
+                                { label: d2.name, data: [d2.cli, d2.gen, d2.phy], fill: true, backgroundColor: isDark ? 'rgba(14, 165, 233, 0.4)' : 'rgba(2, 132, 199, 0.4)', borderColor: isDark ? '#38bdf8' : '#0284c7', borderWidth: 2 }
+                            ]
+                        },
+                        options: { 
+                            responsive: true, maintainAspectRatio: false,
+                            scales: { r: { grid: { color: gridColor }, pointLabels: { color: pointLabelColor, font: { weight: 'bold' } }, ticks: { display: false } } },
+                            plugins: { legend: { position: 'bottom', labels: { color: legendColor, font: { weight: 'bold' } } } }
+                        }
+                    });
+
+                    barChart = new Chart(document.getElementById('barChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['Climate', 'Genome', 'Physics'],
+                            datasets: [
+                                { label: d1.name, data: [d1.cli, d1.gen, d1.phy], backgroundColor: isDark ? 'rgba(99, 102, 241, 0.8)' : 'rgba(67, 56, 202, 0.8)', borderRadius: 4 },
+                                { label: d2.name, data: [d2.cli, d2.gen, d2.phy], backgroundColor: isDark ? 'rgba(14, 165, 233, 0.8)' : 'rgba(2, 132, 199, 0.8)', borderRadius: 4 }
+                            ]
+                        },
+                        options: { 
+                            responsive: true, maintainAspectRatio: false,
+                            scales: { x: { grid: { display: false } } },
+                            plugins: { legend: { position: 'bottom', labels: { color: legendColor, font: { weight: 'bold' } } } }
+                        }
+                    });
+                }
+                
+                renderChart();
+            </script>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+        const html = document.documentElement;
+
+        if (localStorage.getItem('theme') === 'light') { html.classList.remove('dark'); themeIcon.innerText = '🌙'; themeText.innerText = 'Dark'; }
+        
+        themeToggle.addEventListener('click', () => {
+            if (html.classList.contains('dark')) { html.classList.remove('dark'); localStorage.setItem('theme', 'light'); themeIcon.innerText = '🌙'; themeText.innerText = 'Dark'; } 
+            else { html.classList.add('dark'); localStorage.setItem('theme', 'dark'); themeIcon.innerText = '☀️'; themeText.innerText = 'Light'; }
+            if(typeof renderChart === "function") renderChart();
+        });
+    </script>
+</body>
+</html>
